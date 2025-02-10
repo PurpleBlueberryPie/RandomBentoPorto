@@ -11,6 +11,22 @@
             box-sizing: border-box;
         }
 
+        @keyframes chaos {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+            50% {
+                transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(var(--scale));
+            }
+            100% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+        }
+
+        .bento-item.chaos {
+            animation: chaos 1.5s ease-in-out;
+        }
+
         body {
             min-height: 100vh;
             background: #f0f0f0;
@@ -23,47 +39,210 @@
             margin: 0 auto;
             display: grid;
             gap: 20px;
-            grid-template-columns: repeat(4, 1fr);
-            grid-auto-flow: dense; /* This helps fill gaps */
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-auto-flow: dense;
+            grid-auto-rows: 150px; /* Increased base unit for better visibility */
         }
 
         .bento-item {
             background: white;
             border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-            min-height: 100px;
+            padding: 0;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
 
         .bento-item:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .bento-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transition: transform 0.3s ease;
+        }
+
+        .bento-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 80%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            margin: 20px 0 10px;
+            color: #333;
+        }
+
+        .modal-description {
+            margin: 10px 0;
+            line-height: 1.6;
+            color: #666;
         }
 
         @media (max-width: 768px) {
             .bento-container {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            .modal-content {
+                max-width: 95%;
+                padding: 20px;
             }
         }
 
         @media (max-width: 480px) {
             .bento-container {
                 grid-template-columns: 1fr;
+                gap: 10px;
             }
+        }
+
+        .regenerate-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .regenerate-button:hover {
+            background: #444;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
     <div class="bento-container" id="bentoContainer"></div>
+    <div class="modal" id="bentoModal">
+        <div class="modal-content">
+            <img class="modal-image" src="" alt="">
+            <h2 class="modal-title"></h2>
+            <p class="modal-description"></p>
+        </div>
+    </div>
 
     <script>
-        const colors = [
-            '#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA',
-            '#FFD700', '#98FB98', '#DDA0DD', '#F0E68C'
+        const smallPatterns = [
+            { cols: 1, rows: 1 }
+        ];
+
+        const mediumPatterns = [
+            { cols: 2, rows: 1 },
+            { cols: 1, rows: 2 }
+        ];
+
+        const largePatterns = [
+            { cols: 2, rows: 2 }
+        ];
+
+        const imageData = [
+            {src: "./img/1.webp", title: "Project 1", description: "Description for Project 1", preferredPattern: "large"}, 
+            {src: "./img/2.webp", title: "Project 2", description: "Description for Project 2", preferredPattern: "small"}, 
+            {src: "./img/3.webp", title: "Project 3", description: "Description for Project 3", preferredPattern: "medium"}, 
+            {src: "./img/4.webp", title: "Project 4", description: "Description for Project 4", preferredPattern: "small"}, 
+            {src: "./img/5.webp", title: "Project 5", description: "Description for Project 5", preferredPattern: "medium"}, 
+            {src: "./img/6.webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/7.webp", title: "Project 7", description: "Description for Project 7", preferredPattern: "medium"}, 
+            {src: "./img/8.webp", title: "Project 8", description: "Description for Project 8", preferredPattern: "large"}, 
+            {src: "./img/9.webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/10.webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/11.webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (1).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (2).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (3).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (4).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (5).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (6).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (7).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"}, 
+            {src: "./img/img (8).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small"},
+            { src: "./img/imag (1).webp", title: "Project 1", description: "Description for Project 1", preferredPattern: "small" },
+            { src: "./img/imag (2).webp", title: "Project 2", description: "Description for Project 2", preferredPattern: "small" },
+            { src: "./img/imag (3).webp", title: "Project 3", description: "Description for Project 3", preferredPattern: "small" },
+            { src: "./img/imag (4).webp", title: "Project 4", description: "Description for Project 4", preferredPattern: "small" },
+            { src: "./img/imag (5).webp", title: "Project 5", description: "Description for Project 5", preferredPattern: "small" },
+            { src: "./img/imag (6).webp", title: "Project 6", description: "Description for Project 6", preferredPattern: "small" },
+            { src: "./img/imag (7).webp", title: "Project 7", description: "Description for Project 7", preferredPattern: "small" },
+            { src: "./img/imag (8).webp", title: "Project 8", description: "Description for Project 8", preferredPattern: "small" },
+            { src: "./img/imag (9).webp", title: "Project 9", description: "Description for Project 9", preferredPattern: "small" },
+            { src: "./img/imag (10).webp", title: "Project 10", description: "Description for Project 10", preferredPattern: "small" },
+            { src: "./img/imag (11).webp", title: "Project 11", description: "Description for Project 11", preferredPattern: "small" },
+            { src: "./img/imag (12).webp", title: "Project 12", description: "Description for Project 12", preferredPattern: "small" },
+            { src: "./img/imag (13).webp", title: "Project 13", description: "Description for Project 13", preferredPattern: "small" },
+            { src: "./img/imag (14).webp", title: "Project 14", description: "Description for Project 14", preferredPattern: "small" },
+            { src: "./img/imag (15).webp", title: "Project 15", description: "Description for Project 15", preferredPattern: "small" },
+            { src: "./img/imag (16).webp", title: "Project 16", description: "Description for Project 16", preferredPattern: "small" },
+            { src: "./img/imag (17).webp", title: "Project 17", description: "Description for Project 17", preferredPattern: "small" },
+            { src: "./img/imag (18).webp", title: "Project 18", description: "Description for Project 18", preferredPattern: "small" },
+            { src: "./img/imag (19).webp", title: "Project 19", description: "Description for Project 19", preferredPattern: "small" },
+            { src: "./img/imag (20).webp", title: "Project 20", description: "Description for Project 20", preferredPattern: "small" },
+            { src: "./img/imag (21).webp", title: "Project 21", description: "Description for Project 21", preferredPattern: "small" },
+            { src: "./img/imag (22).webp", title: "Project 22", description: "Description for Project 22", preferredPattern: "small" },
+            { src: "./img/imag (23).webp", title: "Project 23", description: "Description for Project 23", preferredPattern: "small" },
+            { src: "./img/imag (24).webp", title: "Project 24", description: "Description for Project 24", preferredPattern: "small" },
+            { src: "./img/imag (25).webp", title: "Project 25", description: "Description for Project 25", preferredPattern: "small" },
+            { src: "./img/imag (26).webp", title: "Project 26", description: "Description for Project 26", preferredPattern: "small" },
+            { src: "./img/imag (27).webp", title: "Project 27", description: "Description for Project 27", preferredPattern: "small" },
+            { src: "./img/imag (28).webp", title: "Project 28", description: "Description for Project 28", preferredPattern: "small" },
+            { src: "./img/imag (29).webp", title: "Project 29", description: "Description for Project 29", preferredPattern: "large" },
+            { src: "./img/imag (30).webp", title: "Project 30", description: "Description for Project 30", preferredPattern: "small" },
+            { src: "./img/imag (31).webp", title: "Project 31", description: "Description for Project 31", preferredPattern: "small" },
+            { src: "./img/imag (32).webp", title: "Project 32", description: "Description for Project 32", preferredPattern: "small" },
+            { src: "./img/imag (33).webp", title: "Project 33", description: "Description for Project 33", preferredPattern: "small" }
         ];
 
         function shuffle(array) {
@@ -74,67 +253,102 @@
             return array;
         }
 
+        function getPatternForImage(image) {
+            switch(image.preferredPattern) {
+                case 'small':
+                    return smallPatterns[Math.floor(Math.random() * smallPatterns.length)];
+                case 'medium':
+                    return mediumPatterns[Math.floor(Math.random() * mediumPatterns.length)];
+                case 'large':
+                    return largePatterns[Math.floor(Math.random() * largePatterns.length)];
+                default:
+                    return smallPatterns[0];
+            }
+        }
+
         function createBentoLayout() {
             const container = document.getElementById('bentoContainer');
             container.innerHTML = '';
             
-            // Create layout patterns
-            const patterns = [
-                { cols: 2, rows: 2 }, // Large square
-                { cols: 2, rows: 1 }, // Horizontal rectangle
-                { cols: 1, rows: 2 }, // Vertical rectangle
-                { cols: 1, rows: 1 }  // Small square
-            ];
-
-            // Create a shuffled array of box configurations
-            let boxes = [];
-            // Ensure we have enough boxes to fill the space
-            for (let i = 0; i < 8; i++) {
-                const pattern = patterns[Math.floor(Math.random() * (i === 0 ? 2 : patterns.length))];
-                boxes.push({
-                    id: i + 1,
-                    ...pattern,
-                    color: colors[i]
-                });
-            }
+            let boxes = imageData.map((image, index) => ({
+                id: index + 1,
+                ...getPatternForImage(image),
+                image: image
+            }));
             
-            // Shuffle the boxes
             boxes = shuffle(boxes);
 
-            // Create and append elements
             boxes.forEach(box => {
                 const item = document.createElement('div');
                 item.className = 'bento-item';
-                item.textContent = `Box ${box.id}`;
-                item.style.backgroundColor = box.color;
+                
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'image-container';
+                
+                const img = document.createElement('img');
+                img.src = box.image.src;
+                img.alt = box.image.title;
+                img.loading = 'lazy';
+                
+                imageContainer.appendChild(img);
+                item.appendChild(imageContainer);
+                
                 item.style.gridColumn = `span ${box.cols}`;
                 item.style.gridRow = `span ${box.rows}`;
+                
+                item.addEventListener('click', () => showModal(box.image));
+                
                 container.appendChild(item);
             });
         }
 
-        // Initial creation
-        createBentoLayout();
+        const modal = document.getElementById('bentoModal');
+        const modalImage = modal.querySelector('.modal-image');
+        const modalTitle = modal.querySelector('.modal-title');
+        const modalDescription = modal.querySelector('.modal-description');
 
-        // Recreate on refresh
-        window.addEventListener('beforeunload', createBentoLayout);
+        function showModal(imageData) {
+            modalImage.src = imageData.src;
+            modalImage.alt = imageData.title;
+            modalTitle.textContent = imageData.title;
+            modalDescription.textContent = imageData.description;
+            modal.style.display = 'flex';
+        }
 
-        // Add button to manually regenerate layout
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Create and append regenerate button
         const regenerateButton = document.createElement('button');
-        regenerateButton.textContent = 'Regenerate Layout';
-        regenerateButton.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        `;
-        regenerateButton.addEventListener('click', createBentoLayout);
+        regenerateButton.textContent = 'Embrace Chaos';
+        regenerateButton.className = 'regenerate-button';
+        regenerateButton.addEventListener('click', () => {
+            const items = document.querySelectorAll('.bento-item');
+
+            items.forEach(item => {
+                // Apply random transformation values
+                item.style.setProperty('--tx', `${Math.random() * 200 - 100}px`);
+                item.style.setProperty('--ty', `${Math.random() * 200 - 100}px`);
+                item.style.setProperty('--rot', `${Math.random() * 360 - 180}deg`);
+                item.style.setProperty('--scale', `${Math.random() * 1.5 + 0.5}`);
+
+                // Add chaos class to trigger animation
+                item.classList.add('chaos');
+            });
+
+            // After the animation ends, reshuffle layout and remove chaos effect
+            setTimeout(() => {
+                createBentoLayout();
+                items.forEach(item => item.classList.remove('chaos'));
+            }, 1500); // Matches the 1.5s animation duration
+        });
         document.body.appendChild(regenerateButton);
+
+        // Initial layout creation
+        createBentoLayout();
     </script>
 </body>
 </html>
